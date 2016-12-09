@@ -24,5 +24,5 @@ def encode(domain, h):
 
         sentence.list_to_disjunction(domain.actions, t)
         for pair in action_perms:
-            sentence.add_action_mutex(pair)
+            sentence.add_action_mutex(pair, t)
     return sentence

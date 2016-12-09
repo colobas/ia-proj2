@@ -6,15 +6,18 @@ class SATsentence:
 
     def get_dimacs_var(self, var):
         negated = hasattr(var[0], "negated") and var[0].negated
-
-        if not var in self.dimacs:
+        try:
+            if negated:
+                return -self.dimacs[var]
+            else:
+                return self.dimacs[var]
+        except:
             self.dimacs[var] = self.var_cnt
             self.var_cnt += 1
-
-        if negated:
-            return -self.dimacs[var]
-        else:
-            return self.dimacs[var]
+            if negated:
+                return -self.dimacs[var]
+            else:
+                return self.dimacs[var]
 
 
     def add_unit_clause(self, atom, time):

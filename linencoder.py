@@ -1,3 +1,4 @@
+from itertools import permutations
 from SAT import SATsentence
 
 def encode(domain, h):
@@ -17,7 +18,7 @@ def encode(domain, h):
         for action in domain.actions:
             sentence.add_action_effects_and_preconds(action, t)
 
-            for atom in domain.herbrand:
+            for atom in domain.hebrand:
                 if atom not in action.effects:
                     if atom.negate() not in action.effects:
                         sentence.add_frame_axioms(atom, action, t)

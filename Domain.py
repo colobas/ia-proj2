@@ -1,3 +1,5 @@
+from Actions import BaseAction
+from Atoms import Atom
 from itertools import product
 
 class Domain:
@@ -49,7 +51,7 @@ class Domain:
             for var in vars:
                 self.variables.add(var)
 
-        for base_action in self.base_actions:
+        for base_action in base_actions:
             for comb in product(self.variables, repeat=base_action.n_args):
                 self.actions.add(base_action.ground(comb))
 

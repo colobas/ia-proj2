@@ -12,7 +12,7 @@ class Atom:
     def __eq__(self, other):
         if self.negated != other.negated:
             return False
-        if self.base != self.other:
+        if self.base != other.base:
             return False
         return True
 

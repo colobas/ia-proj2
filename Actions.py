@@ -38,7 +38,7 @@ class BaseAction:
         name = self.name
         preconds = self.preconds
         effects = self.effects
-        for arg, i in enumerate(args):
+        for i,arg in enumerate(args):
             name = name.replace(arg, arg_tup[i])
             preconds = preconds.replace(arg, arg_tup[i])
             effects = effects.replace(arg, arg_tup[i])

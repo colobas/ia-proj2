@@ -1,3 +1,5 @@
+*.dat
+*.txt
 old
 docs
 # Byte-compiled / optimized / DLL files

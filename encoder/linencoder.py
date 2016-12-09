@@ -1,5 +1,5 @@
 from itertools import permutations
-from SAT import SATsentence
+from encoder.SAT import SATsentence
 
 def encode(domain, h):
     sentence = SATsentence()
@@ -27,3 +27,16 @@ def encode(domain, h):
         for pair in action_perms:
             sentence.add_action_mutex(pair, t)
     return sentence
+
+def decode(domain, sentence, sol, h):
+    for var in sol:
+        if var < 0:
+            sol.remove(var)
+
+    for t in range(h):
+        for action in domain.actions:
+            action_dimacs_var = sentence.get_dimacs_var((action, t))
+            if action_dimacs_var in sol:
+                print(action.name)
+                break
+

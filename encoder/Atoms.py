@@ -1,6 +1,6 @@
 class Atom:
     def __init__(self, string):
-        self.base = string.replace("-","")
+        self.base = string.replace("-","").replace("\n","")
         self.negated = "-" in string
 
     def negate(self):

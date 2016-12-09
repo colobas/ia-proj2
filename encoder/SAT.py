@@ -43,11 +43,10 @@ class SATsentence:
         atom_t_dimacs = self.get_dimacs_var((atom,t))
         atom_t1_dimacs = self.get_dimacs_var((atom, t+1))
         action_dimacs = self.get_dimacs_var((action,t))
-
         self.sentence.append("-{} -{} {} 0".format(
-                             atom_t_dimacs, action_dimacs, atom_t1_dimacs))
+            atom_t_dimacs, action_dimacs, atom_t1_dimacs))
         self.sentence.append("{} -{} -{} 0".format(
-                             atom_t_dimacs, action_dimacs, atom_t1_dimacs))
+            atom_t_dimacs, action_dimacs, atom_t1_dimacs))
 
     def list_to_disjunction(self, actions, t):
         disj = ""

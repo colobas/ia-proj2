@@ -31,5 +31,5 @@ def read_Dimacs(filename):
     if N_variables != len(set( abs(aux) for clause in formula for aux in clause)):
         print('Number of variables dont match')
         sys.exit(-1)
-    print(formula)
+    #print(formula)
     return formula

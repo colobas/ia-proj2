@@ -1,5 +1,5 @@
-from Actions import BaseAction
-from Atoms import Atom
+from encoder.Actions import BaseAction
+from encoder.Atoms import Atom
 from itertools import product
 
 class Domain:

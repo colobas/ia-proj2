@@ -1,4 +1,4 @@
-from Atoms import Atom
+from encoder.Atoms import Atom
 
 cases = [
     "({})",

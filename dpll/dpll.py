@@ -1,9 +1,6 @@
-
-
 def sat_clause(clause, v):
     if set(clause).intersection(v):
         return True
-
     return False
 
 def sat_all(f, v):

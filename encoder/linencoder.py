@@ -35,8 +35,8 @@ def decode(domain, sentence, sol, h):
 
     for t in range(h):
         for action in domain.actions:
-            action_dimacs_var = sentence.get_dimacs_var((action, t))
+            action_dimacs_var = sentence.get_dimacs_var(action, t)
             if action_dimacs_var in sol:
                 print(action.name)
-                break
+#                break
 

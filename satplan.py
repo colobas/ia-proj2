@@ -19,6 +19,7 @@ domain = Domain(sys.argv[1])
 t = 0
 while True:
     t += 1
+    print("t = {}".format(t))
     sentence = step_t(domain, t)
     sol = solver("res.txt")
     if not sol:

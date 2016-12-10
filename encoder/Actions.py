@@ -24,6 +24,9 @@ class Action:
     def __eq__(self, other):
         return self.name == other.name
 
+    def __repr__(self):
+        return self.name
+
 class BaseAction:
     def __init__(self, string):
         aux1 = string.split(":")
@@ -39,8 +42,9 @@ class BaseAction:
         preconds = self.preconds
         effects = self.effects
         for i,arg in enumerate(args):
-            name = name.replace(arg, arg_tup[i])
-            preconds = preconds.replace(arg, arg_tup[i])
-            effects = effects.replace(arg, arg_tup[i])
+            for case in cases:
+                name = name.replace(case.format(arg), case.format(arg_tup[i]))
+                preconds = preconds.replace(case.format(arg), case.format(arg_tup[i]))
+                effects = effects.replace(case.format(arg), case.format(arg_tup[i]))
 
         return Action(name, preconds, effects)

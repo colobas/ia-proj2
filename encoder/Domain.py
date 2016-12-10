@@ -47,7 +47,7 @@ class Domain:
                 base_actions.add(BaseAction(line[2:]))
 
         for atom in self.initial_state.union(self.goal_state):
-            vars = atom.base.split("(")[1].split(")")[0].split(",")
+            vars = atom.name.split("(")[1].split(")")[0].split(",")
             for var in vars:
                 self.variables.add(var)
 
@@ -56,10 +56,17 @@ class Domain:
                 self.actions.add(base_action.ground(comb))
 
         for action in self.actions:
-            for a in action.preconds.union(action.effects):
+            for a in action.preconds:
                 if a.negated:
                     self.hebrand.add(a.negate())
                 else:
                     self.hebrand.add(a)
+
+            for a in action.effects:
+                if a.negated:
+                    self.hebrand.add(a.negate())
+                else:
+                    self.hebrand.add(a)
+
 
 

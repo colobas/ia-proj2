@@ -29,14 +29,18 @@ def encode(domain, h):
     return sentence
 
 def decode(domain, sentence, sol, h):
+    to_rem = []
     for var in sol:
         if var < 0:
-            sol.remove(var)
+            to_rem.append(var)
+
+    for var in to_rem:
+        sol.remove(var)
 
     for t in range(h):
         for action in domain.actions:
             action_dimacs_var = sentence.get_dimacs_var(action, t)
             if action_dimacs_var in sol:
                 print(action.name)
-#                break
+                break
 

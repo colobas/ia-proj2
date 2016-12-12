@@ -35,16 +35,13 @@ def get_unit_clause(f,v):
 
 def get_pure_literal(f):
     all_literals = set()
-    pures = set()
     for clause in f:
         all_literals.update(clause)
 
     for l in all_literals:
         if -l not in all_literals:
-            pures.add(l)
-
-    return pures
-
+            return l
+    return None
 
 def get_symbols(f):
     return set([abs(l) for clause in f for l in clause])
@@ -58,75 +55,71 @@ def remove_falses(f, lit):
 def remove_clauses(f, lit):
     return [clause for clause in f if lit not in clause]
 
+@profile
 def first_pass(old_f, v, lit):
     new_f = []
     neg_v = [-x for x in v]
+    unit_clause = None
+    pure = None
+    all_literals = set()
+
     for clause in old_f:
         if unsat_clause(clause, neg_v):
-            return False
+            return False, None, None
         if -lit in clause:
             # remove symbol from clauses where it yields false
             cl = clause.copy()
             cl.remove(-lit)
             new_f.append(cl)
-            continue
-        if lit not in clause:
+            all_literals.update(cl)
+        elif lit not in clause:
             # only save clauses not made true by this assignment
             new_f.append(clause.copy())
-    return new_f
+            all_literals.update(clause)
 
+        if len(clause) == 1:
+            aux = max(clause)
+            if aux != lit:
+                unit_clause = aux
+
+    for l in all_literals:
+        if -l not in all_literals:
+            if l != unit_clause and l != lit:
+                pure = l
+                break
+
+    return new_f, unit_clause, pure
 
 
 def solver_DPLL(f):
+    @profile
     def dfs(old_f, symbols, old_v, lit):
         v = old_v.copy()
         v.add(lit)
         sym = symbols.copy()
         sym.remove(abs(lit))
 
+        if sat_all(old_f,v):
+            return v
 
-        f = first_pass(old_f, v, lit)
+        f, l, pure = first_pass(old_f, v, lit)
         if not f:
             return False
 
-        unit_lit = set()
+        if l != None:
+            #print("unit clause {}".format(l))
+            return dfs(f, sym, v, l)
 
-        if sat_all(f,v):
-            return v
+        if pure != None:
+            #print("pure symbol {}".format(pure))
+            #print("found in {}".format(f))
+            return dfs(f, sym, v, pure)
 
-        for clause in f[:]:
-            if len(clause) == 1:
-                unit_lit.add(clause.pop())
-                f.remove(clause)
-
-        for l in unit_lit:
-            if -l in unit_lit:
-                return False
-            for clause in f[:]:
-                if -l in clause:
-                    clause.remove(-l)
-                if l in clause:
-                    f.remove(clause)
-            sym.remove(abs(l))
-            v.add(l)
-
-        pures = get_pure_literal(f)
-        if len(pures) > 0:
-            for l in pures:
-                for clause in f[:]:
-                    if l in clause:
-                        f.remove(clause)
-                sym.remove(abs(l))
-                v.add(l)
-
-        if len(sym) == 0:
-            if sat_all(f,v):
-                return v
-            return False
-
-        lit = max(sym)
-        return dfs(f, sym, v, lit) or dfs(f, sym, v, -lit)
+        l = max(sym)
+        #print("branch {}".format(l))
+        return dfs(f, sym, v, l) or dfs(f, sym, v, -l)
 
     symbols = get_symbols(f)
     lit = max(symbols)
+    #print("root {}".format(lit))
     return dfs(f, symbols, set(), lit) or dfs(f, symbols, set(), -lit)

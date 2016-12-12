@@ -55,53 +55,55 @@ def remove_falses(f, lit):
 def remove_clauses(f, lit):
     return [clause for clause in f if lit not in clause]
 
-@profile
-def first_pass(old_f, v, lits, must_copy):
-    new_f = []
-    neg_v = [-x for x in v]
-    neg_lits = [-l for l in lits]
+#@profile
+def first_pass(old_f, v, lits):
+    import pdb; pdb.set_trace()
+    f = old_f
+    while True:
+        new_f = []
+        neg_v = [-x for x in v]
+        neg_lits = [-l for l in lits]
 
-    if len(lits.intersection(neg_lits)) > 0:
-        return False, None
-
-    unit_clauses = set()
-    all_literals = set()
-    to_delete = []
-
-    for clause in old_f:
-        if unsat_clause(clause, neg_v):
+        if len(lits.intersection(neg_lits)) > 0:
             return False, None
 
-        cl = clause.difference(neg_lits)
-        # remove symbols from clauses where they yield false
+        unit_clauses = set()
+        all_literals = set()
+        to_delete = []
 
-        if len(clause) == 1: # if clause is a unit clause, remove it and store assignment
-            unit_clauses.update(cl)
-            continue
+        for clause in f:
+            if unsat_clause(clause, neg_v):
+                return False, None
 
-        if len(cl.intersection(lits)) > 0:
-        # if any of the variables in lits is true, clause is true, remove it
-            continue
+            cl = clause.difference(neg_lits)
+            # remove symbols from clauses where they yield false
 
-        all_literals.update(cl)
-        new_f.append(cl)
+            if len(clause) == 1: # if clause is a unit clause, remove it and store assignment
+                unit_clauses.update(cl)
+                continue
+
+            if len(cl.intersection(lits)) > 0:
+            # if any of the variables in lits is true, clause is true, remove it
+                continue
+
+            all_literals.update(cl)
+            new_f.append(cl)
 
 
-    for l in all_literals:
-        if -l not in unit_clauses and -l not in all_literals:
-            unit_clauses.add(l)
+        for l in all_literals:
+            if -l not in unit_clauses and -l not in all_literals:
+                unit_clauses.add(l)
 
-    return new_f, unit_clauses
+        if len(unit_clauses) == 0:
+            return new_f, unit_clauses
+
+        lits = unit_clauses.difference(lits)
+        f = new_f.copy()
+        v.update(unit_clauses)
 
 #@profile
-def dfs(old_f, symbols, old_v, lits, must_copy):
+def dfs(old_f, sym, v, lits):
     #print("lits {}".format(lits))
-    if must_copy:
-        v = old_v.copy()
-        sym = symbols.copy()
-    else:
-        v = old_v
-        sym = symbols
 
     v.update(lits)
     sym.difference_update([abs(lit) for lit in lits])
@@ -112,19 +114,30 @@ def dfs(old_f, symbols, old_v, lits, must_copy):
     if len(sym) == 0:
         return False
 
-    f, unit_clauses = first_pass(old_f, v, lits, must_copy)
+    f, unit_clauses = first_pass(old_f, v, lits)
     if f == False:
         return False
 
     if len(unit_clauses) != 0:
-        return dfs(f, sym, v, unit_clauses, False)
+        return dfs(f, sym, v, unit_clauses)
+
+
+        f, unit_clauses = first_pass(f, v, unit_clauses)
+        if f == False:
+            return False
 
 
     l = max(sym)
-    return dfs(f, sym, v, set([l]), True) or dfs(f, sym, v, set([-l]), False)
+    return dfs(f, sym, v.copy(), set([l])) or dfs(f, sym, v, set([-l]))
 
 
 def solver_DPLL(f):
-    symbols = get_symbols(f)
+    no_dups = set()
+    for clause in f:
+        no_dups.add(frozenset(clause))
+
+    new_f = [set(cl) for cl in no_dups]
+    print("removed {} duplicate".format(len(f)-len(no_dups)))
+    symbols = get_symbols(new_f)
     lit = min(symbols)
-    return dfs(f, symbols, set(), set([lit]), True) or dfs(f, symbols, set(), set([-lit]), False)
+    return dfs(new_f, symbols, set(), set([lit])) or dfs(new_f, symbols, set(), set([-lit]))

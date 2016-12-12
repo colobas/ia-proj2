@@ -56,70 +56,75 @@ def remove_clauses(f, lit):
     return [clause for clause in f if lit not in clause]
 
 @profile
-def first_pass(old_f, v, lit):
+def first_pass(old_f, v, lits, must_copy):
     new_f = []
     neg_v = [-x for x in v]
-    unit_clause = None
-    pure = None
+    neg_lits = [-l for l in lits]
+
+    if len(lits.intersection(neg_lits)) > 0:
+        return False, None
+
+    unit_clauses = set()
     all_literals = set()
+    to_delete = []
 
     for clause in old_f:
         if unsat_clause(clause, neg_v):
-            return False, None, None
-        if -lit in clause:
-            # remove symbol from clauses where it yields false
-            cl = clause.copy()
-            cl.remove(-lit)
-            new_f.append(cl)
-            all_literals.update(cl)
-        elif lit not in clause:
-            # only save clauses not made true by this assignment
-            new_f.append(clause.copy())
-            all_literals.update(clause)
+            return False, None
 
-        if len(clause) == 1:
-            aux = max(clause)
-            if aux != lit:
-                unit_clause = aux
+        cl = clause.difference(neg_lits)
+        # remove symbols from clauses where they yield false
+
+        if len(clause) == 1: # if clause is a unit clause, remove it and store assignment
+            unit_clauses.update(cl)
+            continue
+
+        if len(cl.intersection(lits)) > 0:
+        # if any of the variables in lits is true, clause is true, remove it
+            continue
+
+        all_literals.update(cl)
+        new_f.append(cl)
+
 
     for l in all_literals:
-        if -l not in all_literals:
-            if l != unit_clause and l != lit:
-                pure = l
-                break
+        if -l not in unit_clauses and -l not in all_literals:
+            unit_clauses.add(l)
 
-    return new_f, unit_clause, pure
+    return new_f, unit_clauses
+
+#@profile
+def dfs(old_f, symbols, old_v, lits, must_copy):
+    #print("lits {}".format(lits))
+    if must_copy:
+        v = old_v.copy()
+        sym = symbols.copy()
+    else:
+        v = old_v
+        sym = symbols
+
+    v.update(lits)
+    sym.difference_update([abs(lit) for lit in lits])
+
+    if sat_all(old_f,v):
+        return v
+
+    if len(sym) == 0:
+        return False
+
+    f, unit_clauses = first_pass(old_f, v, lits, must_copy)
+    if f == False:
+        return False
+
+    if len(unit_clauses) != 0:
+        return dfs(f, sym, v, unit_clauses, False)
+
+
+    l = max(sym)
+    return dfs(f, sym, v, set([l]), True) or dfs(f, sym, v, set([-l]), False)
 
 
 def solver_DPLL(f):
-    @profile
-    def dfs(old_f, symbols, old_v, lit):
-        v = old_v.copy()
-        v.add(lit)
-        sym = symbols.copy()
-        sym.remove(abs(lit))
-
-        if sat_all(old_f,v):
-            return v
-
-        f, l, pure = first_pass(old_f, v, lit)
-        if not f:
-            return False
-
-        if l != None:
-            #print("unit clause {}".format(l))
-            return dfs(f, sym, v, l)
-
-        if pure != None:
-            #print("pure symbol {}".format(pure))
-            #print("found in {}".format(f))
-            return dfs(f, sym, v, pure)
-
-        l = max(sym)
-        #print("branch {}".format(l))
-        return dfs(f, sym, v, l) or dfs(f, sym, v, -l)
-
     symbols = get_symbols(f)
-    lit = max(symbols)
-    #print("root {}".format(lit))
-    return dfs(f, symbols, set(), lit) or dfs(f, symbols, set(), -lit)
+    lit = min(symbols)
+    return dfs(f, symbols, set(), set([lit]), True) or dfs(f, symbols, set(), set([-lit]), False)

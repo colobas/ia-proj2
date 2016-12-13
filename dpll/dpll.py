@@ -56,8 +56,7 @@ def remove_clauses(f, lit):
     return [clause for clause in f if lit not in clause]
 
 #@profile
-def first_pass(old_f, v, lits):
-    import pdb; pdb.set_trace()
+def first_pass(old_f, v, lits, sym):
     f = old_f
     while True:
         new_f = []
@@ -65,15 +64,14 @@ def first_pass(old_f, v, lits):
         neg_lits = [-l for l in lits]
 
         if len(lits.intersection(neg_lits)) > 0:
-            return False, None
+            return False, None, None
 
         unit_clauses = set()
         all_literals = set()
-        to_delete = []
 
         for clause in f:
             if unsat_clause(clause, neg_v):
-                return False, None
+                return False, None, None
 
             cl = clause.difference(neg_lits)
             # remove symbols from clauses where they yield false
@@ -95,40 +93,37 @@ def first_pass(old_f, v, lits):
                 unit_clauses.add(l)
 
         if len(unit_clauses) == 0:
-            return new_f, unit_clauses
+            return new_f, v, sym
 
         lits = unit_clauses.difference(lits)
         f = new_f.copy()
         v.update(unit_clauses)
+        sym.difference_update(set([abs(x) for x in unit_clauses]))
 
 #@profile
-def dfs(old_f, sym, v, lits):
-    #print("lits {}".format(lits))
-
-    v.update(lits)
-    sym.difference_update([abs(lit) for lit in lits])
-
-    if sat_all(old_f,v):
-        return v
+def dfs(old_f, sym, v, lit):
+    if lit != 0:
+        #print("branch with {}".format(lit))
+        v.add(lit)
+        #sym.remove(abs(lit))
 
     if len(sym) == 0:
         return False
 
-    f, unit_clauses = first_pass(old_f, v, lits)
+    if lit != 0:
+        f, v, sym = first_pass(old_f, v, {lit}, sym)
+    else:
+        f, v, sym = first_pass(old_f, v, set(), sym)
+
     if f == False:
         return False
 
-    if len(unit_clauses) != 0:
-        return dfs(f, sym, v, unit_clauses)
+    if sat_all(old_f,v):
+        return v
 
-
-        f, unit_clauses = first_pass(f, v, unit_clauses)
-        if f == False:
-            return False
-
-
-    l = max(sym)
-    return dfs(f, sym, v.copy(), set([l])) or dfs(f, sym, v, set([-l]))
+    #l = max(sym, key = lambda x: sum([1 for clause in f if x in clause or -x in clause]))
+    l = sym.pop()
+    return dfs(f, sym.copy(), v.copy(), l) or dfs(f, sym, v, -l)
 
 
 def solver_DPLL(f):
@@ -137,7 +132,7 @@ def solver_DPLL(f):
         no_dups.add(frozenset(clause))
 
     new_f = [set(cl) for cl in no_dups]
-    print("removed {} duplicate".format(len(f)-len(no_dups)))
+    print("removed {} duplicates".format(len(f)-len(no_dups)))
+
     symbols = get_symbols(new_f)
-    lit = min(symbols)
-    return dfs(new_f, symbols, set(), set([lit])) or dfs(new_f, symbols, set(), set([-lit]))
+    return dfs(new_f, symbols, set(), 0)

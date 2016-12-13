@@ -1,3 +1,4 @@
+*.out
 *minisat*
 *.dat
 *.txt

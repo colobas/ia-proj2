@@ -1,6 +1,10 @@
+""" module to implement the Atom class"""
+
 class Atom:
+    """ class to represent an Atom """
     def __init__(self, string):
-        self.name = string.replace("-","").replace("\n","")
+        """ parse string to build Atom """
+        self.name = string.replace("-", "").replace("\n", "")
         self.negated = "-" in string
 
     def __repr__(self):
@@ -10,6 +14,7 @@ class Atom:
             return self.name
 
     def negate(self):
+        """ retrieve the negation of this Atom """
         if self.negated:
             return Atom(self.name)
         else:

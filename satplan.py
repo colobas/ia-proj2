@@ -1,29 +1,20 @@
-from encoder.linencoder import encode,decode
+"""SATPLAN implementation, using the linear encoder and the dpll modules"""
+
+import sys
+from encoder.linencoder import encode, decode
 from encoder.Domain import Domain
 from dpll.solver import solver
 
-import sys
 
-
-def step_t(domain, t):
-    sent = encode(domain, t)
-    with open("res.txt", "w") as f:
-        print("p cnf {} {}".format(sent.var_cnt-1, len(sent.sentence)), file=f)
-        for line in sent.sentence:
-            print(line, file=f)
-
-    return sent
-
-
-domain = Domain(sys.argv[1])
-t = 0
+DOMAIN = Domain(sys.argv[1]) # parse input file and build corresponding domain
+T = 0
 while True:
-    t += 1
-    print("t = {}".format(t))
-    sentence = step_t(domain, t)
-    sol = solver("res.txt")
-    if not sol:
+    T += 1
+    FORMULA = encode(DOMAIN, T) # encode domain for horizon T
+    SOL = solver(FORMULA.sentence) # apply dpll in the obtained encoding
+    if not SOL: # if FORMULA is unsatisfiable, increase time horizon
         continue
 
-    decode(domain, sentence, sol, t)
+    # if FORMULA is satisfiable decode and print solution
+    decode(DOMAIN, FORMULA, SOL, T)
     break

@@ -1,138 +1,145 @@
-import copy
+""" module to implement DPLL algorithm and relevant auxiliary functions """
 
-def sat_clause(clause, v):
-    if clause.intersection(v):
+from collections import Counter
+
+SYM_COUNT = Counter()
+
+def sat_clause(clause, model):
+    """ check if clause is satisfied by the model """
+
+    if clause.intersection(model):
         return True
     return False
 
-def sat_all(f, v):
-    for clause in f:
-        if len(clause) == 0 or not sat_clause(clause, v):
+def sat_all(formula, model):
+    """ check if all clauses in formula are satisfied by the model """
+    for clause in formula:
+        if len(clause) == 0 or not sat_clause(clause, model):
             return False
     return True
 
-def unsat(f,v):
-    neg_v = [-x for x in v]
-    for clause in f:
-        if unsat_clause(clause, neg_v):
-            return True
-    return False
-
 def unsat_clause(clause, neg_v):
+    """ check if clause is unsatisfied by the model.
+    (neg_v is the 'symmetric model')"""
     return len(clause.intersection(neg_v)) == len(clause)
 
-def unassigned_literals(clause, v):
-    unit_lit = [l for l in clause if l not in v and -l not in v]
-    return unit_lit
+def get_symbols(formula):
+    """ get all symbols in formula """
+    return set([abs(lit) for clause in formula for lit in clause])
 
-def get_unit_clause(f,v):
-    for clause in f:
-        unit_lit = unassigned_literals(clause, v)
-        if len(unit_lit) == 1:
-            n = remove_falses([clause for clause in f if unit_lit[0] not in clause], unit_lit[0])
-            return unit_lit[0], n
-    return None, None
+def units_and_pures(old_f, model, lits, sym):
+    """ remove unit clauses and pure symbols from formula,
+    updating the model accordingly. unsatisfiability is
+    also checked here. """
 
-def get_pure_literal(f):
-    all_literals = set()
-    for clause in f:
-        all_literals.update(clause)
-
-    for l in all_literals:
-        if -l not in all_literals:
-            return l
-    return None
-
-def get_symbols(f):
-    return set([abs(l) for clause in f for l in clause])
-
-def remove_falses(f, lit):
-    for clause in f:
-        if -lit in clause:
-            clause.remove(-lit)
-    return f
-
-def remove_clauses(f, lit):
-    return [clause for clause in f if lit not in clause]
-
-#@profile
-def first_pass(old_f, v, lits, sym):
-    f = old_f
+    formula = old_f
     while True:
+        # cycle until there are no unit clauses or pure symbols to extract.
+        # in each cycle, 'lits' contains the unit clauses and pure symbols
+        # found in the previous cycle. in the first cycle, 'lits' will only
+        # contain one element, which is the one with which this function is
+        # called and corresponds to the assignment made in the branch where
+        # this function was called.
+
         new_f = []
-        neg_v = [-x for x in v]
-        neg_lits = [-l for l in lits]
+        neg_v = [-x for x in model] # 'symmetric' to the model
+
+        neg_lits = [-l for l in lits] # symmetric to the unit clauses and pure
+#                                       found in the previous cycle
 
         if len(lits.intersection(neg_lits)) > 0:
+            # return False if a contradiction is found
             return False, None, None
 
-        unit_clauses = set()
-        all_literals = set()
+        unit_clauses = set() # contains values from unit clauses and pure symbols
+        all_literals = set() # contains all literals contained in the clauses
 
-        for clause in f:
+        for clause in formula:
             if unsat_clause(clause, neg_v):
+                # if any clause in is unsatisfied the model doesn't hold
                 return False, None, None
 
-            cl = clause.difference(neg_lits)
+            cla = clause.difference(neg_lits)
             # remove symbols from clauses where they yield false
 
-            if len(clause) == 1: # if clause is a unit clause, remove it and store assignment
-                unit_clauses.update(cl)
+            if len(clause) == 1:
+                # if clause is a unit clause, remove it and store assignment
+                unit_clauses.update(cla)
                 continue
 
-            if len(cl.intersection(lits)) > 0:
-            # if any of the variables in lits is true, clause is true, remove it
+            if len(cla.intersection(lits)) > 0:
+                # if any of the variables in 'lits' is true in this clause,
+                # clause is true, remove it
                 continue
 
-            all_literals.update(cl)
-            new_f.append(cl)
+            all_literals.update(cla)
+            new_f.append(cla)
 
 
-        for l in all_literals:
-            if -l not in unit_clauses and -l not in all_literals:
-                unit_clauses.add(l)
+        for lit in all_literals:
+            if -lit not in unit_clauses and -lit not in all_literals:
+                unit_clauses.add(lit)
 
         if len(unit_clauses) == 0:
-            return new_f, v, sym
+            # if there are no unit clauses or pure symbols left, return
+            return new_f, model, sym
 
+
+        # prepare variables for the next cycle
         lits = unit_clauses.difference(lits)
-        f = new_f.copy()
-        v.update(unit_clauses)
+        formula = new_f.copy()
+        model.update(unit_clauses)
         sym.difference_update(set([abs(x) for x in unit_clauses]))
 
-#@profile
 def dfs(old_f, sym, v, lit):
-    if lit != 0:
-        #print("branch with {}".format(lit))
+    """ recursive dfs implementation, that traverses the 'decision tree' """
+
+    if lit != 0: # test for first iteration
         v.add(lit)
-        #sym.remove(abs(lit))
 
     if len(sym) == 0:
         return False
 
-    if lit != 0:
-        f, v, sym = first_pass(old_f, v, {lit}, sym)
-    else:
-        f, v, sym = first_pass(old_f, v, set(), sym)
 
-    if f == False:
+    # remove unit clauses and pure symbols
+    if lit != 0: # test for first iteration
+        formula, model, sym = units_and_pures(old_f, v, {lit}, sym)
+    else:
+        formula, model, sym = units_and_pures(old_f, v, set(), sym)
+
+    if formula is False:
+        # if removing unit clauses and pure symbols made the formula
+        # unsatisfiable, return False
         return False
 
-    if sat_all(old_f,v):
-        return v
-
-    #l = max(sym, key = lambda x: sum([1 for clause in f if x in clause or -x in clause]))
-    l = sym.pop()
-    return dfs(f, sym.copy(), v.copy(), l) or dfs(f, sym, v, -l)
+    if sat_all(old_f, v):
+        # if removing unit clauses and pure symbols made the formula
+        # satisfiable, return solution model
+        return model
 
 
-def solver_DPLL(f):
+    # retrieve next variable to assign, based on the number of clauses it
+    # was involved with in the beginning of the problem
+    decision = max(sym, key = lambda x: SYM_COUNT[abs(x)])
+    sym.remove(decision)
+
+    # spawn two branches
+    return (dfs(formula, sym.copy(), model.copy(), decision)
+            or dfs(formula, sym, model, -decision))
+
+
+def dpll(formula):
+    """ remove duplicate clauses from formula, count number of clauses
+    each symbol is involved in, and spawn root node for the recursion tree """
     no_dups = set()
-    for clause in f:
+    for clause in formula:
         no_dups.add(frozenset(clause))
 
-    new_f = [set(cl) for cl in no_dups]
-    print("removed {} duplicates".format(len(f)-len(no_dups)))
+    new_f = []
+    for cla in no_dups:
+        new_f.append(set(cla))
+        for sym in cla:
+            SYM_COUNT[abs(sym)] += 1
 
     symbols = get_symbols(new_f)
     return dfs(new_f, symbols, set(), 0)

@@ -1,34 +1,41 @@
+""" module to implement the linear encoder """
+
 from itertools import permutations
 from encoder.SAT import SATsentence
 
 def encode(domain, h):
+    """ encode problem domain with time horizon h """
     sentence = SATsentence()
     action_perms = list(permutations(domain.actions, r=2))
 
     for atom in domain.hebrand:
-        if atom in domain.initial_state: # initial state axiom
+        if atom in domain.initial_state: # initial state axioms
             sentence.add_unit_clause(atom, 0)
         else:
             sentence.add_unit_clause(atom.negate(), 0)
 
-        if atom in domain.goal_state:
+        if atom in domain.goal_state: # goal state axioms
             sentence.add_unit_clause(atom, h)
 
-    for t in range(h):
+    for tim in range(h):
         for action in domain.actions:
-            sentence.add_action_effects_and_preconds(action, t)
+            # each action implies its effects and preconditions
+            sentence.add_action_eff_prec(action, tim)
 
             for atom in domain.hebrand:
                 if atom not in action.effects:
                     if atom.negate() not in action.effects:
-                        sentence.add_frame_axioms(atom, action, t)
+                        # atoms not in this action's effects aren't affected by it
+                        sentence.add_frame_axioms(atom, action, tim)
 
-        sentence.list_to_disjunction(domain.actions, t)
+        # at least one action is performed at time t
+        sentence.list_to_disjunction(domain.actions, tim)
         for pair in action_perms:
-            sentence.add_action_mutex(pair, t)
+            sentence.add_action_mutex(pair, tim)
     return sentence
 
-def decode(domain, sentence, sol, h):
+def decode(domain, sentence, sol, horiz):
+    """ decode solution and print resulting plan """
     to_rem = []
     for var in sol:
         if var < 0:
@@ -37,10 +44,10 @@ def decode(domain, sentence, sol, h):
     for var in to_rem:
         sol.remove(var)
 
-    for t in range(h):
+    for tim in range(horiz):
         for action in domain.actions:
-            action_dimacs_var = sentence.get_dimacs_var(action, t)
+            action_dimacs_var = sentence.get_dimacs_var(action, tim)
             if action_dimacs_var in sol:
-                print(action.name)
+                aux = action.name.split("(")
+                print(aux[0] + " " + aux[1].replace(",", " ").strip(")"))
                 break
-
